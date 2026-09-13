@@ -2,8 +2,8 @@ package com.mbfreire.employee_reporting.dto.response;
 
 import com.mbfreire.employee_reporting.enums.ReportStatus;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReportAdminResponseDTO(
@@ -13,6 +13,6 @@ public record ReportAdminResponseDTO(
         ReportStatus status,
         LocalDate incidentDate,
         String incidentLocation,
-        LocalDateTime createdAt,
+        Instant createdAt,
         List<AttachmentResponseDTO> attachments
 ) {}
