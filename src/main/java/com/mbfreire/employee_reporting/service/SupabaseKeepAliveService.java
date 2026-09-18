@@ -17,14 +17,13 @@ public class SupabaseKeepAliveService {
     private final String bucketName;
 
     public SupabaseKeepAliveService(
-            RestClient.Builder restClientBuilder,
             @Value("${supabase.url}") String supabaseUrl,
             @Value("${supabase.secret-key}") String secretKey,
             @Value("${supabase.storage.bucket}") String bucketName
     ) {
         this.bucketName = bucketName;
 
-        this.restClient = restClientBuilder
+        this.restClient = RestClient.builder()
                 .baseUrl(supabaseUrl)
                 .defaultHeader("apikey", secretKey)
                 .build();
@@ -35,7 +34,6 @@ public class SupabaseKeepAliveService {
             zone = "America/Bahia"
     )
     public void keepAlive() {
-
         try {
             restClient.get()
                     .uri("/storage/v1/bucket/{bucket}", bucketName)
