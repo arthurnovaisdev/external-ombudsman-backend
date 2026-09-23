@@ -1,14 +1,17 @@
 package com.mbfreire.employee_reporting.service;
 
+import com.mbfreire.employee_reporting.config.AttachmentFeatureProperties;
 import com.mbfreire.employee_reporting.dto.request.ReportRequestDTO;
 import com.mbfreire.employee_reporting.dto.request.ReportStatusUpdateRequestDTO;
 import com.mbfreire.employee_reporting.dto.response.*;
 import com.mbfreire.employee_reporting.entity.*;
 import com.mbfreire.employee_reporting.enums.ReportStatus;
 import com.mbfreire.employee_reporting.exception.BusinessRuleException;
+import com.mbfreire.employee_reporting.exception.AttachmentUnavailableException;
 import com.mbfreire.employee_reporting.exception.ResourceNotFoundException;
 import com.mbfreire.employee_reporting.repository.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,9 +43,10 @@ public class ReportService {
     private final CategoryRepository categoryRepository;
     private final StatusHistoryRepository statusHistoryRepository;
     private final AuditLogRepository auditLogRepository;
-    private final FileStorageService fileStorageService;
+    private final ObjectProvider<FileStorageService> fileStorageServiceProvider;
     private final AttachmentRepository attachmentRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AttachmentFeatureProperties attachmentFeatureProperties;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -119,10 +123,16 @@ public class ReportService {
 
     @Transactional(readOnly = true)
     public AttachmentDownloadDTO downloadAttachment (String protocol, UUID attachmentId) {
+        if (!attachmentFeatureProperties.isEnabled()) {
+            throw new AttachmentUnavailableException(
+                    "A recuperação de anexos está temporariamente indisponível."
+            );
+        }
+
         Attachment attachment = attachmentRepository.findByIdAndReportProtocol(attachmentId, protocol)
                 .orElseThrow(() -> new ResourceNotFoundException("Anexo não encontrado."));
 
-        Resource resource = fileStorageService.loadFile(attachment.getStoredFileName());
+        Resource resource = requireFileStorageService().loadFile(attachment.getStoredFileName());
 
         return new AttachmentDownloadDTO(
                 resource,
@@ -165,6 +175,14 @@ public class ReportService {
 
     @Transactional
     public void uploadAttachments(String protocol, String trackingCode, List<MultipartFile> files) {
+        if (!attachmentFeatureProperties.isEnabled()) {
+            throw new AttachmentUnavailableException(
+                    "O envio de anexos está temporariamente indisponível."
+            );
+        }
+
+        FileStorageService fileStorageService = requireFileStorageService();
+
         Report report = reportRepository.findByProtocolForUpdate(protocol)
                 .orElseThrow(() -> new ResourceNotFoundException("Denúncia ou código de acesso inválido."));
 
@@ -180,7 +198,7 @@ public class ReportService {
 
         List<String> storedFiles = new ArrayList<>();
 
-        registerRollbackCleanup(storedFiles);
+        registerRollbackCleanup(storedFiles, fileStorageService);
 
         for (MultipartFile file : files) {
             FileStorageService.StoredFile storedFile = fileStorageService.storeFile(file);
@@ -275,7 +293,8 @@ public class ReportService {
     }
 
     private void registerRollbackCleanup(
-            List<String> storedFiles
+            List<String> storedFiles,
+            FileStorageService fileStorageService
     ) {
 
         if (!TransactionSynchronizationManager
@@ -297,6 +316,18 @@ public class ReportService {
                             }
                         }
                 );
+    }
+
+    private FileStorageService requireFileStorageService() {
+        FileStorageService fileStorageService = fileStorageServiceProvider.getIfAvailable();
+
+        if (fileStorageService == null) {
+            throw new AttachmentUnavailableException(
+                    "O serviço de anexos está temporariamente indisponível."
+            );
+        }
+
+        return fileStorageService;
     }
 
     private String generateUniqueProtocol() {

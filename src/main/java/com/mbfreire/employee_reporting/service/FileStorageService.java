@@ -3,6 +3,7 @@ package com.mbfreire.employee_reporting.service;
 import com.mbfreire.employee_reporting.exception.BusinessRuleException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "attachments.enabled", havingValue = "true")
 @Slf4j
 public class FileStorageService {
 

@@ -6,6 +6,7 @@ import com.mbfreire.employee_reporting.dto.response.AttachmentDownloadDTO;
 import com.mbfreire.employee_reporting.dto.response.ProtocolResponseDTO;
 import com.mbfreire.employee_reporting.dto.response.ReportAdminResponseDTO;
 import com.mbfreire.employee_reporting.dto.response.ReportResponseDTO;
+import com.mbfreire.employee_reporting.exception.AttachmentUnavailableException;
 import com.mbfreire.employee_reporting.security.UserDetailsImpl;
 import com.mbfreire.employee_reporting.service.ReportService;
 import jakarta.validation.Valid;
@@ -36,17 +37,24 @@ public class ReportController {
 
     private final ReportService reportService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ProtocolResponseDTO> register(@Valid @RequestBody ReportRequestDTO dto) {
         ProtocolResponseDTO response = reportService.register(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> rejectMultipartRegistration() {
+        throw new AttachmentUnavailableException(
+                "O envio de anexos está temporariamente indisponível. Registre a denúncia sem arquivos."
+        );
+    }
+
     @PostMapping(value = "/{protocol}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadAttachments(
             @PathVariable @Pattern (regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol,
-            @RequestParam("trackingCode") @Pattern(regexp = "[A-HJ-NP-Z2-9]{10}", message = "O código de rastreio informado é inválido.") String trackingCode,
-            @RequestParam("files")List<MultipartFile> files
+            @RequestParam(value = "trackingCode", required = false) @Pattern(regexp = "[A-HJ-NP-Z2-9]{10}", message = "O código de rastreio informado é inválido.") String trackingCode,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files
             ) {
         reportService.uploadAttachments(protocol, trackingCode, files);
         return ResponseEntity.status(HttpStatus.CREATED).build();

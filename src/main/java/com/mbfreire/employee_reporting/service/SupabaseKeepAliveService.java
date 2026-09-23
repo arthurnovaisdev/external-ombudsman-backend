@@ -3,11 +3,16 @@ package com.mbfreire.employee_reporting.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 @Service
+@ConditionalOnProperty(
+        name = {"attachments.enabled", "supabase.keep-alive.enabled"},
+        havingValue = "true"
+)
 public class SupabaseKeepAliveService {
 
     private static final Logger logger =

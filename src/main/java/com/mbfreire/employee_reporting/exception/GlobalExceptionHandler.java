@@ -56,6 +56,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
+    @ExceptionHandler(AttachmentUnavailableException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAttachmentUnavailable(AttachmentUnavailableException e) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                e.getMessage(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponseDTO> handleValidationExceptions(MethodArgumentNotValidException e) {
         Map<String, String> errors = new LinkedHashMap<>();
