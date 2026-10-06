@@ -5,7 +5,7 @@ import java.util.UUID;
 public record UserResponseDTO(
         UUID id,
         String name,
-        String cpf,
+        String username,
         String contactEmail,
         String role,
         boolean active,

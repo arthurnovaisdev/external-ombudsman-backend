@@ -1,6 +1,5 @@
 package com.mbfreire.employee_reporting.entity;
 
-import com.mbfreire.employee_reporting.enums.ReportStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,14 +23,24 @@ public class Report {
     @Column(nullable = false, unique = true)
     private String protocol;
 
-    @Column(name = "access_code_hash", nullable = false)
-    private String accessCodeHash;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "owner_user_id",
+            nullable = false
+    )
+    private User owner;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(
+            name = "category_id",
+            nullable = false
+    )
     private Category category;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(
+            nullable = false,
+            columnDefinition = "TEXT"
+    )
     private String description;
 
     @Column(name = "incident_date")
@@ -40,23 +49,28 @@ public class Report {
     @Column(name = "incident_location")
     private String incidentLocation;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private ReportStatus status;
-
-    @Column(name = "created_at", updatable = false)
+    @Column(
+            name = "created_at",
+            updatable = false
+    )
     private Instant createdAt;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
+    @Column(name = "messages_purged_at")
+    private Instant messagesPurgedAt;
 
     @PrePersist
     protected void onCreate() {
+
         Instant now = Instant.now();
+
         this.createdAt = now;
         this.updatedAt = now;
-        this.status = ReportStatus.RECEIVED;
     }
 
     @PreUpdate

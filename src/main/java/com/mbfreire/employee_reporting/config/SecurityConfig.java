@@ -75,7 +75,7 @@ public class SecurityConfig {
                         ).permitAll()
 
 
-                        // AUTENTICAÇÃO PÚBLICA
+                        // PUBLIC AUTHENTICATION
 
                         .requestMatchers(
                                 "/api/auth/login",
@@ -83,11 +83,10 @@ public class SecurityConfig {
                                 "/api/auth/reset-password"
                         ).permitAll()
 
+
                         // SWAGGER
-                        //
-                        // Permitido aqui para desenvolvimento.
-                        // No profile "prod" o Springdoc será
-                        // completamente desabilitado.
+                        // Development only.
+                        // Disabled in production profile.
 
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -96,59 +95,61 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // REGISTRO DE USUÁRIO
+
+                        // ADMIN - USER REGISTRATION
 
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/auth/register"
                         ).hasRole("ADMIN")
 
-                        // PRÓPRIA CONTA
+
+                        // OWN USER ACCOUNT
 
                         .requestMatchers(
                                 "/api/users/me/**"
                         ).authenticated()
 
-                        // ADMINISTRAÇÃO DE USUÁRIOS
+
+                        // ADMIN - USER MANAGEMENT
 
                         .requestMatchers(
                                 "/api/users/**"
                         ).hasRole("ADMIN")
 
-                        // ADMINISTRAÇÃO DE DENÚNCIAS
+
+
+                        // ADMIN - REPORTS
+                        // Includes details, messages, attachments and close
 
                         .requestMatchers(
                                 "/api/reports/admin/**"
                         ).hasRole("ADMIN")
 
-                        // EMPLOYEE - CRIAR DENÚNCIA
+
+                        // CLIENT - CREATE REPORT
 
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/reports"
-                        ).hasRole("EMPLOYEE")
+                        ).hasRole("CLIENT")
 
-                        // EMPLOYEE - ENVIAR ANEXOS
 
-                        .requestMatchers(
-                                HttpMethod.POST,
-                                "/api/reports/*/attachments"
-                        ).hasRole("EMPLOYEE")
-
-                        // EMPLOYEE - CONSULTAR DENÚNCIA
+                        // CLIENT - OWN REPORTS
+                        // Includes details, messages and attachments
 
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/reports/consult"
-                        ).hasRole("EMPLOYEE")
+                                "/api/reports/mine/**"
+                        ).hasRole("CLIENT")
 
-                        // CATEGORIAS
+
+                        // CATEGORIES
 
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/categories"
                         ).hasAnyRole(
-                                "EMPLOYEE",
+                                "CLIENT",
                                 "ADMIN"
                         )
 
@@ -157,24 +158,28 @@ public class SecurityConfig {
                                 "/api/categories"
                         ).hasRole("ADMIN")
 
+
                         // DENY BY DEFAULT
 
                         .anyRequest().denyAll()
                 )
 
-                // FILTRO JWT
+
+                // JWT
 
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
 
-                // PRIMEIRO ACESSO
+
+                // FIRST ACCESS
 
                 .addFilterAfter(
                         firstAccessFilter,
                         JWTAuthenticationFilter.class
                 )
+
 
                 // RATE LIMIT
 
@@ -185,6 +190,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
@@ -201,17 +207,19 @@ public class SecurityConfig {
                     "application/json;charset=UTF-8"
             );
 
-            var error = new ErrorResponseDTO(
-                    401,
-                    "Token ausente, inválido ou expirado",
-                    LocalDateTime.now()
-            );
+            var error =
+                    new ErrorResponseDTO(
+                            401,
+                            "Token ausente, inválido ou expirado",
+                            LocalDateTime.now()
+                    );
 
             response.getWriter().write(
                     mapper.writeValueAsString(error)
             );
         };
     }
+
 
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
@@ -228,11 +236,12 @@ public class SecurityConfig {
                     "application/json;charset=UTF-8"
             );
 
-            var error = new ErrorResponseDTO(
-                    403,
-                    "Você não tem permissão para acessar este recurso",
-                    LocalDateTime.now()
-            );
+            var error =
+                    new ErrorResponseDTO(
+                            403,
+                            "Você não tem permissão para acessar este recurso",
+                            LocalDateTime.now()
+                    );
 
             response.getWriter().write(
                     mapper.writeValueAsString(error)
@@ -240,11 +249,12 @@ public class SecurityConfig {
         };
     }
 
+
     @Bean
     public PasswordEncoder passwordEncoder() {
-
         return new BCryptPasswordEncoder();
     }
+
 
     @Bean
     public AuthenticationManager authenticationManager(

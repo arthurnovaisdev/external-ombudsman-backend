@@ -24,49 +24,100 @@ public class JWTService {
     private long expirationMs;
 
     private SecretKey getKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(
+                secret.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     public String generateToken(UserDetails userDetails) {
+
         if (!(userDetails instanceof UserDetailsImpl customUserDetails)) {
-            throw new IllegalArgumentException("Tipo de usuário inválido para a geração do JWT.");
+            throw new IllegalArgumentException(
+                    "Tipo de usuário inválido para a geração do JWT."
+            );
         }
+
         return Jwts.builder()
                 .subject(userDetails.getUsername())
-                .claim("role", userDetails.getAuthorities().iterator().next().getAuthority())
-                .claim(TOKEN_VERSION_CLAIM, customUserDetails.getUser().getTokenVersion())
+                .claim(
+                        "role",
+                        userDetails.getAuthorities()
+                                .iterator()
+                                .next()
+                                .getAuthority()
+                )
+                .claim(
+                        TOKEN_VERSION_CLAIM,
+                        customUserDetails
+                                .getUser()
+                                .getTokenVersion()
+                )
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .expiration(
+                        new Date(
+                                System.currentTimeMillis()
+                                        + expirationMs
+                        )
+                )
                 .signWith(getKey())
                 .compact();
     }
 
-    public String extractCpf(String token) {
-        return extractClaim(token, Claims::getSubject);
+    public String extractUsername(String token) {
+        return extractClaim(
+                token,
+                Claims::getSubject
+        );
     }
 
     public long extractTokenVersion(String token) {
-        Object value = extractClaim(token, claims -> claims.get(TOKEN_VERSION_CLAIM));
+
+        Object value = extractClaim(
+                token,
+                claims -> claims.get(TOKEN_VERSION_CLAIM)
+        );
+
         if (value instanceof Number number) {
             return number.longValue();
         }
+
         return -1L;
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
+    public boolean isTokenValid(
+            String token,
+            UserDetails userDetails
+    ) {
+
         if (!(userDetails instanceof UserDetailsImpl customUserDetails)) {
             return false;
         }
-        String cpf = extractCpf(token);
-        long tokenVersion = extractTokenVersion(token);
-        long currentTokenVersion = customUserDetails.getUser().getTokenVersion();
-        boolean sameUser = cpf.equals(userDetails.getUsername());
-        boolean sameTokenVersion = tokenVersion == currentTokenVersion;
 
-        return sameUser && sameTokenVersion && !isTokenExpired(token);
+        String username = extractUsername(token);
+
+        long tokenVersion =
+                extractTokenVersion(token);
+
+        long currentTokenVersion =
+                customUserDetails
+                        .getUser()
+                        .getTokenVersion();
+
+        boolean sameUser =
+                username.equals(
+                        userDetails.getUsername()
+                );
+
+        boolean sameTokenVersion =
+                tokenVersion == currentTokenVersion;
+
+        return sameUser
+                && sameTokenVersion
+                && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {
+
         Date expiration = extractClaim(
                 token,
                 Claims::getExpiration
@@ -75,9 +126,18 @@ public class JWTService {
         return expiration.before(new Date());
     }
 
-    private <T> T extractClaim(String token, Function<Claims, T> resolver) {
-        Claims claims = Jwts.parser().verifyWith(getKey()).build()
-                .parseSignedClaims(token).getPayload();
+    private <T> T extractClaim(
+            String token,
+            Function<Claims, T> resolver
+    ) {
+
+        Claims claims =
+                Jwts.parser()
+                        .verifyWith(getKey())
+                        .build()
+                        .parseSignedClaims(token)
+                        .getPayload();
+
         return resolver.apply(claims);
     }
 }

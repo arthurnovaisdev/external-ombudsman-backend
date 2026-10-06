@@ -1,10 +1,10 @@
 package com.mbfreire.employee_reporting.controller;
 
 import com.mbfreire.employee_reporting.dto.request.ReportRequestDTO;
-import com.mbfreire.employee_reporting.dto.request.ReportStatusUpdateRequestDTO;
 import com.mbfreire.employee_reporting.dto.response.AttachmentDownloadDTO;
 import com.mbfreire.employee_reporting.dto.response.ProtocolResponseDTO;
 import com.mbfreire.employee_reporting.dto.response.ReportAdminResponseDTO;
+import com.mbfreire.employee_reporting.dto.response.ReportAdminSummaryResponseDTO;
 import com.mbfreire.employee_reporting.dto.response.ReportResponseDTO;
 import com.mbfreire.employee_reporting.exception.AttachmentUnavailableException;
 import com.mbfreire.employee_reporting.security.UserDetailsImpl;
@@ -15,15 +15,20 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.*;
+import org.springframework.data.domain.Sort;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.validation.annotation.Validated;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -35,79 +40,298 @@ import java.util.UUID;
 @Validated
 public class ReportController {
 
+    private static final String PROTOCOL_REGEX =
+            "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}";
+
     private final ReportService reportService;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ProtocolResponseDTO> register(@Valid @RequestBody ReportRequestDTO dto) {
-        ProtocolResponseDTO response = reportService.register(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public ResponseEntity<ProtocolResponseDTO> register(
+            @Valid @RequestBody ReportRequestDTO dto,
+            @AuthenticationPrincipal UserDetailsImpl principal
+    ) {
+
+        ProtocolResponseDTO response =
+                reportService.register(
+                        dto,
+                        principal.getUser()
+                );
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> rejectMultipartRegistration() {
+
         throw new AttachmentUnavailableException(
-                "O envio de anexos está temporariamente indisponível. Registre a denúncia sem arquivos."
+                "Registre a manifestação primeiro e envie os anexos separadamente."
         );
     }
 
-    @PostMapping(value = "/{protocol}/attachments", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @GetMapping("/mine")
+    public ResponseEntity<Page<ReportResponseDTO>> findMine(
+            @RequestParam(defaultValue = "0")
+            @Min(
+                    value = 0,
+                    message = "A página não pode ser negativa."
+            )
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            @Min(
+                    value = 1,
+                    message = "O tamanho da página deve ser no mínimo 1."
+            )
+            @Max(
+                    value = 50,
+                    message = "O tamanho da página deve ser no máximo 50."
+            )
+            int size,
+
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
+    ) {
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size,
+                        Sort.by(
+                                Sort.Direction.DESC,
+                                "createdAt"
+                        )
+                );
+
+        return ResponseEntity.ok(
+                reportService.findMine(
+                        principal.getUser(),
+                        pageable
+                )
+        );
+    }
+
+
+    @GetMapping("/mine/{protocol}")
+    public ResponseEntity<ReportResponseDTO> findMineDetail(
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol,
+
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
+    ) {
+
+        return ResponseEntity.ok(
+                reportService.findMineDetail(
+                        protocol,
+                        principal.getUser()
+                )
+        );
+    }
+
+    @PostMapping(
+            value = "/mine/{protocol}/attachments",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<Void> uploadAttachments(
-            @PathVariable @Pattern (regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol,
-            @RequestParam(value = "trackingCode", required = false) @Pattern(regexp = "[A-HJ-NP-Z2-9]{10}", message = "O código de rastreio informado é inválido.") String trackingCode,
-            @RequestParam(value = "files", required = false) List<MultipartFile> files
-            ) {
-        reportService.uploadAttachments(protocol, trackingCode, files);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol,
 
-    @GetMapping("/consult")
-    public ResponseEntity<ReportResponseDTO> consult(
-            @RequestParam @Pattern(regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol,
-            @RequestParam @Pattern(regexp = "[A-HJ-NP-Z2-9]{10}", message = "O código de acesso informado é inválido.") String code
-    ) {
-        return ResponseEntity.ok(reportService.consult(protocol, code));
-    }
+            @RequestParam(
+                    value = "files",
+                    required = false
+            )
+            List<MultipartFile> files,
 
-    @GetMapping("/admin")
-    public ResponseEntity<Page<ReportResponseDTO>> listAll(
-            @RequestParam(defaultValue = "0") @Min(value = 0, message = "A página não pode ser negativa") int page,
-            @RequestParam(defaultValue = "10") @Min(value = 1, message = "O tamanho da página deve ser no mínimo 1.") @Max(value = 50, message = "O tamanho da página deve ser no máximo 50.") int size
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
     ) {
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
+
+        reportService.uploadAttachments(
+                protocol,
+                principal.getUser(),
+                files
         );
 
-        Page<ReportResponseDTO> reports = reportService.findAll(pageable);
-
-        return ResponseEntity.ok(reports);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .build();
     }
+
+
+    @GetMapping(
+            "/mine/{protocol}/attachments/{attachmentId}"
+    )
+    public ResponseEntity<Resource> downloadOwnAttachment(
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol,
+
+            @PathVariable
+            UUID attachmentId,
+
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
+    ) {
+
+        AttachmentDownloadDTO attachment =
+                reportService.downloadAttachment(
+                        protocol,
+                        attachmentId,
+                        principal.getUser()
+                );
+
+        return buildAttachmentResponse(
+                attachment
+        );
+    }
+    @GetMapping("/admin")
+    public ResponseEntity<Page<ReportAdminSummaryResponseDTO>>
+    findAllAdmin(
+
+            @RequestParam(defaultValue = "0")
+            @Min(
+                    value = 0,
+                    message = "A página não pode ser negativa."
+            )
+            int page,
+
+            @RequestParam(defaultValue = "10")
+            @Min(
+                    value = 1,
+                    message = "O tamanho da página deve ser no mínimo 1."
+            )
+            @Max(
+                    value = 50,
+                    message = "O tamanho da página deve ser no máximo 50."
+            )
+            int size
+    ) {
+
+        Pageable pageable =
+                PageRequest.of(
+                        page,
+                        size,
+                        Sort.by(
+                                Sort.Direction.DESC,
+                                "createdAt"
+                        )
+                );
+
+        return ResponseEntity.ok(
+                reportService.findAllAdmin(
+                        pageable
+                )
+        );
+    }
+
 
     @GetMapping("/admin/{protocol}")
-    public ResponseEntity<ReportAdminResponseDTO> findAdminDetail(@PathVariable @Pattern(regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol) {
-        ReportAdminResponseDTO response = reportService.findAdminDetail(protocol);
+    public ResponseEntity<ReportAdminResponseDTO>
+    findAdminDetail(
 
-        return ResponseEntity.ok(response);
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol
+    ) {
+
+        return ResponseEntity.ok(
+                reportService.findAdminDetail(
+                        protocol
+                )
+        );
     }
 
-    @GetMapping("/admin/{protocol}/attachments/{attachmentId}")
-    public ResponseEntity<Resource> downloadAttachment(@PathVariable @Pattern(regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol, @PathVariable UUID attachmentId) {
-        AttachmentDownloadDTO attachment = reportService.downloadAttachment(protocol, attachmentId);
 
-        ContentDisposition contentDisposition = ContentDisposition
-                .attachment()
-                .filename(
-                        attachment.originalFileName(),
-                        StandardCharsets.UTF_8
-                ).build();
+    @PostMapping("/admin/{protocol}/close")
+    public ResponseEntity<ReportAdminResponseDTO>
+    close(
 
-        return ResponseEntity.ok().
-                contentType(
-                MediaType.parseMediaType(
-                        attachment.contentType()
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol,
+
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
+    ) {
+
+        return ResponseEntity.ok(
+                reportService.close(
+                        protocol,
+                        principal.getUser()
                 )
-        )
+        );
+    }
+
+
+    @GetMapping(
+            "/admin/{protocol}/attachments/{attachmentId}"
+    )
+    public ResponseEntity<Resource> downloadAdminAttachment(
+
+            @PathVariable
+            @Pattern(
+                    regexp = PROTOCOL_REGEX,
+                    message = "O protocolo informado é inválido."
+            )
+            String protocol,
+
+            @PathVariable
+            UUID attachmentId,
+
+            @AuthenticationPrincipal
+            UserDetailsImpl principal
+    ) {
+
+        AttachmentDownloadDTO attachment =
+                reportService.downloadAttachment(
+                        protocol,
+                        attachmentId,
+                        principal.getUser()
+                );
+
+        return buildAttachmentResponse(
+                attachment
+        );
+    }
+
+    private ResponseEntity<Resource> buildAttachmentResponse(
+            AttachmentDownloadDTO attachment
+    ) {
+
+        ContentDisposition contentDisposition =
+                ContentDisposition
+                        .attachment()
+                        .filename(
+                                attachment.originalFileName(),
+                                StandardCharsets.UTF_8
+                        )
+                        .build();
+
+        return ResponseEntity.ok()
+                .contentType(
+                        MediaType.parseMediaType(
+                                attachment.contentType()
+                        )
+                )
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
                         contentDisposition.toString()
@@ -119,16 +343,8 @@ public class ReportController {
                 .cacheControl(
                         CacheControl.noStore()
                 )
-                .body(attachment.resource());
-    }
-
-    @PatchMapping("/admin/{protocol}/status")
-    public ResponseEntity<ReportResponseDTO> updateStatus(
-            @PathVariable @Pattern(regexp = "DEN-\\d{4}-[A-HJ-NP-Z2-9]{8}", message = "O protocolo informado é inválido.") String protocol,
-            @Valid @RequestBody ReportStatusUpdateRequestDTO dto,
-            @AuthenticationPrincipal UserDetailsImpl principal
-            ) {
-        ReportResponseDTO response = reportService.updateStatus(protocol, dto, principal.getUser());
-        return ResponseEntity.ok(response);
+                .body(
+                        attachment.resource()
+                );
     }
 }

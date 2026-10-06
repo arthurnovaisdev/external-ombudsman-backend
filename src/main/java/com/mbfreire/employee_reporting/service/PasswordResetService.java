@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -42,10 +43,14 @@ public class PasswordResetService {
     public void requestPasswordReset(
             ForgotPasswordRequestDTO dto
     ) {
+
+        String username =
+                normalizeUsername(dto.username());
+
         boolean accountAllowed =
                 rateLimitService.allowSensitiveIdentifier(
                         "forgot-password-account",
-                        dto.cpf(),
+                        username,
                         3,
                         Duration.ofMinutes(30)
                 );
@@ -59,9 +64,7 @@ public class PasswordResetService {
         );
 
         Optional<User> optionalUser =
-                userRepository.findByCpf(
-                        dto.cpf()
-                );
+                userRepository.findByUsername(username);
 
         if (optionalUser.isEmpty()) {
             return;
@@ -234,5 +237,12 @@ public class PasswordResetService {
                     e
             );
         }
+    }
+
+    private String normalizeUsername(String username) {
+
+        return username
+                .trim()
+                .toLowerCase(Locale.ROOT);
     }
 }

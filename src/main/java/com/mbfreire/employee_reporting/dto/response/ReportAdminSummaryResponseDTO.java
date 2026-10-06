@@ -1,15 +1,13 @@
 package com.mbfreire.employee_reporting.dto.response;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
-public record ReportResponseDTO(
+public record ReportAdminSummaryResponseDTO(
         String protocol,
         String category,
         String description,
-        LocalDate incidentDate,
-        String incidentLocation,
         Instant createdAt,
         Instant closedAt,
-        Instant messagesPurgedAt
+        String ownerName,
+        String ownerUsername
 ) {}

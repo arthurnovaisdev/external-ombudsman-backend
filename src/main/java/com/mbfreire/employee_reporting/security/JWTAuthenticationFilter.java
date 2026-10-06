@@ -39,13 +39,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
         String authHeader =
                 request.getHeader("Authorization");
 
-        /*
-         * Não existe Bearer Token.
-         *
-         * Apenas deixa a requisição continuar.
-         * Se o endpoint for protegido,
-         * o Spring Security retornará 401.
-         */
         if (authHeader == null
                 || !authHeader.startsWith("Bearer ")) {
 
@@ -62,21 +55,17 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            String cpf =
-                    jwtService.extractCpf(token);
+            String username =
+                    jwtService.extractUsername(token);
 
-            /*
-             * Só tenta autenticar caso ainda não exista
-             * uma autenticação no SecurityContext.
-             */
-            if (cpf != null
+            if (username != null
                     && SecurityContextHolder
                     .getContext()
                     .getAuthentication() == null) {
 
                 UserDetails userDetails =
                         userDetailsService
-                                .loadUserByUsername(cpf);
+                                .loadUserByUsername(username);
 
                 if (!userDetails.isEnabled()) {
 
@@ -92,10 +81,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                /*
-                 * Confirma assinatura, subject,
-                 * expiração etc. conforme JWTService.
-                 */
                 if (!jwtService.isTokenValid(
                         token,
                         userDetails
@@ -157,12 +142,6 @@ public class JWTAuthenticationFilter extends OncePerRequestFilter {
 
         } catch (UsernameNotFoundException e) {
 
-            /*
-             * Exemplo:
-             *
-             * usuário existia quando o JWT foi criado,
-             * mas posteriormente foi removido.
-             */
 
             SecurityContextHolder.clearContext();
 

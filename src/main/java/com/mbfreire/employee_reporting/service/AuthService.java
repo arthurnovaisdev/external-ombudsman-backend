@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -34,21 +35,42 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponseDTO login(LoginRequestDTO dto) {
 
-        boolean allowed = rateLimitService.allowSensitiveIdentifier("login-account", dto.cpf(), 10, Duration.ofMinutes(15));
+        String username = normalizeUsername(dto.username());
+
+        boolean allowed =
+                rateLimitService.allowSensitiveIdentifier(
+                        "login-account",
+                        username,
+                        10,
+                        Duration.ofMinutes(15)
+                );
 
         if (!allowed) {
-            throw new RateLimitExceededException("Muitas tentativas de login. Aguarde antes de tentar novamente.");
+            throw new RateLimitExceededException(
+                    "Muitas tentativas de login. Aguarde antes de tentar novamente."
+            );
         }
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(dto.cpf(), dto.password()));
+        Authentication authentication =
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                username,
+                                dto.password()
+                        )
+                );
 
-        if (!(authentication.getPrincipal() instanceof UserDetailsImpl userDetails)) {
-            throw new IllegalStateException("Tipo de usuário inválido.");
+        if (!(authentication.getPrincipal()
+                instanceof UserDetailsImpl userDetails)) {
+
+            throw new IllegalStateException(
+                    "Tipo de usuário inválido."
+            );
         }
 
         User user = userDetails.getUser();
-        String token = jwtService.generateToken(userDetails);
+
+        String token =
+                jwtService.generateToken(userDetails);
 
         return new LoginResponseDTO(
                 token,
@@ -60,25 +82,57 @@ public class AuthService {
 
     @Transactional
     public void register(RegisterRequestDTO dto) {
-        if (userRepository.findByCpf(dto.cpf()).isPresent()) {
-            throw new BusinessRuleException("CPF já cadastrado no sistema.");
+
+        String username =
+                normalizeUsername(dto.username());
+
+        if (userRepository
+                .findByUsername(username)
+                .isPresent()) {
+
+            throw new BusinessRuleException(
+                    "Username já cadastrado no sistema."
+            );
         }
 
         User user = User.builder()
                 .name(dto.name().trim())
-                .cpf(dto.cpf())
-                .contactEmail(normalizeContactEmail(dto.contactEmail()))
-                .passwordHash(passwordEncoder.encode(dto.password()))
-                .role(Role.EMPLOYEE)
+                .username(username)
+                .contactEmail(
+                        normalizeContactEmail(
+                                dto.contactEmail()
+                        )
+                )
+                .passwordHash(
+                        passwordEncoder.encode(
+                                dto.password()
+                        )
+                )
+                .role(Role.CLIENT)
                 .build();
 
         userRepository.save(user);
     }
 
-    private String normalizeContactEmail(String contactEmail) {
-        if (contactEmail == null || contactEmail.isBlank()) {
+    private String normalizeUsername(String username) {
+
+        return username
+                .trim()
+                .toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeContactEmail(
+            String contactEmail
+    ) {
+
+        if (contactEmail == null
+                || contactEmail.isBlank()) {
+
             return null;
         }
-        return contactEmail.trim().toLowerCase();
+
+        return contactEmail
+                .trim()
+                .toLowerCase(Locale.ROOT);
     }
 }

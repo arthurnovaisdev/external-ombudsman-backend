@@ -156,7 +156,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleAuthenticationException(AuthenticationException e) {
         ErrorResponseDTO error = new ErrorResponseDTO(
                         HttpStatus.UNAUTHORIZED.value(),
-                        "CPF ou senha inválidos.",
+                   "Username ou senha inválidos.",
                         LocalDateTime.now()
                 );
 

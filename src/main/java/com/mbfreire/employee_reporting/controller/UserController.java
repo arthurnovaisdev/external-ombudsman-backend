@@ -67,10 +67,15 @@ public class UserController {
     }
 
     private UserResponseDTO toDTO(User user) {
+
         return new UserResponseDTO(
-                user.getId(), user.getName(), user.getCpf(),
-                user.getContactEmail(), user.getRole().name(),
-                user.isActive(), user.isPasswordChanged()
+                user.getId(),
+                user.getName(),
+                user.getUsername(),
+                user.getContactEmail(),
+                user.getRole().name(),
+                user.isActive(),
+                user.isPasswordChanged()
         );
     }
 }

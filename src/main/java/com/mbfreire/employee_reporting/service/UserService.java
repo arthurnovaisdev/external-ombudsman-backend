@@ -47,9 +47,14 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
-    public User findByCpf(String cpf) {
-        return userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new ResourceNotFoundException("CPF não encontrado."));
+    public User findByUsername(String username) {
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Usuário não encontrado."
+                        )
+                );
     }
 
     @Transactional(readOnly = true)

@@ -108,6 +108,9 @@ public class ApiRateLimitFilter
         String uri =
                 request.getRequestURI();
 
+
+        // AUTH
+
         if (HttpMethod.POST.matches(method)
                 && uri.equals("/api/auth/login")) {
 
@@ -117,6 +120,7 @@ public class ApiRateLimitFilter
                     Duration.ofMinutes(1)
             );
         }
+
 
         if (HttpMethod.POST.matches(method)
                 && uri.equals(
@@ -130,6 +134,7 @@ public class ApiRateLimitFilter
             );
         }
 
+
         if (HttpMethod.POST.matches(method)
                 && uri.equals(
                 "/api/auth/reset-password"
@@ -142,17 +147,8 @@ public class ApiRateLimitFilter
             );
         }
 
-        if (HttpMethod.GET.matches(method)
-                && uri.equals(
-                "/api/reports/consult"
-        )) {
 
-            return new RateLimitRule(
-                    "report-consult",
-                    20,
-                    Duration.ofMinutes(1)
-            );
-        }
+        // REPORT CREATION
 
         if (HttpMethod.POST.matches(method)
                 && uri.equals("/api/reports")) {
@@ -164,9 +160,40 @@ public class ApiRateLimitFilter
             );
         }
 
+
+        // REPORT MESSAGES
+
         if (HttpMethod.POST.matches(method)
                 && uri.matches(
-                "^/api/reports/[^/]+/attachments$"
+                "^/api/reports/mine/[^/]+/messages$"
+        )) {
+
+            return new RateLimitRule(
+                    "client-report-message",
+                    30,
+                    Duration.ofMinutes(1)
+            );
+        }
+
+
+        if (HttpMethod.POST.matches(method)
+                && uri.matches(
+                "^/api/reports/admin/[^/]+/messages$"
+        )) {
+
+            return new RateLimitRule(
+                    "admin-report-message",
+                    30,
+                    Duration.ofMinutes(1)
+            );
+        }
+
+
+        // ATTACHMENT UPLOAD
+
+        if (HttpMethod.POST.matches(method)
+                && uri.matches(
+                "^/api/reports/mine/[^/]+/attachments$"
         )) {
 
             return new RateLimitRule(
@@ -176,9 +203,12 @@ public class ApiRateLimitFilter
             );
         }
 
+
+        // ATTACHMENT DOWNLOAD
+
         if (HttpMethod.GET.matches(method)
                 && uri.matches(
-                "^/api/reports/admin/[^/]+/attachments/[^/]+$"
+                "^/api/reports/(mine|admin)/[^/]+/attachments/[^/]+$"
         )) {
 
             return new RateLimitRule(
@@ -187,6 +217,7 @@ public class ApiRateLimitFilter
                     Duration.ofMinutes(1)
             );
         }
+
 
         return null;
     }

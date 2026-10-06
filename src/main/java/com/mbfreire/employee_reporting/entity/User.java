@@ -23,8 +23,8 @@ public class User {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 11)
-    private String cpf;
+    @Column(nullable = false, unique = true, length = 50)
+    private String username;
 
     @Column(name = "contact_email")
     private String contactEmail;
@@ -59,6 +59,4 @@ public class User {
     public void incrementTokenVersion() {
         this.tokenVersion++;
     }
-
-
 }
