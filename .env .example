@@ -1,6 +1,8 @@
-POSTGRES_DB=employee_reporting
-POSTGRES_USER=seu_usuario_aqui
+POSTGRES_DB=external_ombudsman
+POSTGRES_USER=external_ombudsman_user
 POSTGRES_PASSWORD=sua_senha_aqui
+POSTGRES_PORT=5433
+
 JWT_SECRET=sua_chave_jwt_super_secreta_aqui
 
 ADMIN_EMAIL=email_do_admin_aqui

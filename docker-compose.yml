@@ -1,15 +1,15 @@
 services:
   postgres:
     image: postgres:16
-    container_name: employee-reporting-db
+    container_name: external-ombudsman-db
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - employee_reporting_data:/var/lib/postgresql/data
+      - external_ombudsman_data:/var/lib/postgresql/data
 
 volumes:
-  employee_reporting_data:
+  external_ombudsman_data:
