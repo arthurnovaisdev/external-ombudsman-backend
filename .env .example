@@ -7,3 +7,6 @@ JWT_SECRET=sua_chave_jwt_super_secreta_aqui
 
 ADMIN_USERNAME=username_do_admin_aqui
 ADMIN_INITIAL_PASSWORD=senha_do_admin_aqui
+
+ADMIN_NOTIFICATIONS_ENABLED=false
+ADMIN_NOTIFICATION_EMAIL=email_do_admin_aqui

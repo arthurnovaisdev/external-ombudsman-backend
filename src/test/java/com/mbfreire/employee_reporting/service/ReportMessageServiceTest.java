@@ -6,12 +6,15 @@ import com.mbfreire.employee_reporting.entity.Report;
 import com.mbfreire.employee_reporting.entity.ReportMessage;
 import com.mbfreire.employee_reporting.entity.User;
 import com.mbfreire.employee_reporting.enums.Role;
+import com.mbfreire.employee_reporting.event.AdminNotificationEvent;
 import com.mbfreire.employee_reporting.exception.BusinessRuleException;
 import com.mbfreire.employee_reporting.exception.ResourceNotFoundException;
 import com.mbfreire.employee_reporting.repository.ReportMessageRepository;
 import com.mbfreire.employee_reporting.repository.ReportRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,14 +24,21 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class ReportMessageServiceTest {
 
     private ReportRepository reportRepository;
     private ReportMessageRepository reportMessageRepository;
+    private ApplicationEventPublisher eventPublisher;
+
     private ReportMessageService reportMessageService;
 
     private User clientA;
@@ -44,10 +54,14 @@ class ReportMessageServiceTest {
         reportMessageRepository =
                 mock(ReportMessageRepository.class);
 
+        eventPublisher =
+                mock(ApplicationEventPublisher.class);
+
         reportMessageService =
                 new ReportMessageService(
                         reportRepository,
-                        reportMessageRepository
+                        reportMessageRepository,
+                        eventPublisher
                 );
 
         clientA =
@@ -77,7 +91,6 @@ class ReportMessageServiceTest {
                         .active(true)
                         .build();
     }
-
 
     @Test
     void clientCannotReadMessagesFromAnotherClientsReport() {
@@ -120,7 +133,6 @@ class ReportMessageServiceTest {
         );
     }
 
-
     @Test
     void clientCannotSendMessageToAnotherClientsReport() {
 
@@ -154,10 +166,10 @@ class ReportMessageServiceTest {
         );
 
         verifyNoInteractions(
-                reportMessageRepository
+                reportMessageRepository,
+                eventPublisher
         );
     }
-
 
     @Test
     void ownerCanReadOwnMessages() {
@@ -291,8 +303,11 @@ class ReportMessageServiceTest {
                         .get(1)
                         .authorRole()
         );
-    }
 
+        verifyNoInteractions(
+                eventPublisher
+        );
+    }
 
     @Test
     void cannotSendMessageToClosedReport() {
@@ -345,8 +360,11 @@ class ReportMessageServiceTest {
         ).saveAndFlush(
                 any()
         );
-    }
 
+        verifyNoInteractions(
+                eventPublisher
+        );
+    }
 
     @Test
     void adminCanReadMessagesFromAnyReport() {
@@ -422,8 +440,11 @@ class ReportMessageServiceTest {
                         .getFirst()
                         .authorUsername()
         );
-    }
 
+        verifyNoInteractions(
+                eventPublisher
+        );
+    }
 
     @Test
     void clientCannotUseAdminMessageMethods() {
@@ -444,7 +465,8 @@ class ReportMessageServiceTest {
 
         verifyNoInteractions(
                 reportRepository,
-                reportMessageRepository
+                reportMessageRepository,
+                eventPublisher
         );
     }
 
@@ -522,16 +544,41 @@ class ReportMessageServiceTest {
         verify(
                 reportMessageRepository
         ).saveAndFlush(
-                argThat(message ->
-                        message.getAuthor()
-                                .getId()
-                                .equals(clientA.getId())
-                                && message.getReport()
-                                .getId()
-                                .equals(report.getId())
-                                && message.getBody()
-                                .equals("Minha mensagem.")
+                org.mockito.ArgumentMatchers.argThat(
+                        message ->
+                                message.getAuthor()
+                                        .getId()
+                                        .equals(clientA.getId())
+                                        && message.getReport()
+                                        .getId()
+                                        .equals(report.getId())
+                                        && message.getBody()
+                                        .equals("Minha mensagem.")
                 )
+        );
+
+        ArgumentCaptor<AdminNotificationEvent> eventCaptor =
+                ArgumentCaptor.forClass(
+                        AdminNotificationEvent.class
+                );
+
+        verify(
+                eventPublisher
+        ).publishEvent(
+                eventCaptor.capture()
+        );
+
+        AdminNotificationEvent event =
+                eventCaptor.getValue();
+
+        assertEquals(
+                AdminNotificationEvent.Type.CLIENT_MESSAGE_CREATED,
+                event.type()
+        );
+
+        assertEquals(
+                protocol,
+                event.protocol()
         );
     }
 
@@ -603,14 +650,19 @@ class ReportMessageServiceTest {
         verify(
                 reportMessageRepository
         ).saveAndFlush(
-                argThat(message ->
-                        message.getAuthor()
-                                .getId()
-                                .equals(admin.getId())
-                                && message.getReport()
-                                .getId()
-                                .equals(report.getId())
+                org.mockito.ArgumentMatchers.argThat(
+                        message ->
+                                message.getAuthor()
+                                        .getId()
+                                        .equals(admin.getId())
+                                        && message.getReport()
+                                        .getId()
+                                        .equals(report.getId())
                 )
+        );
+
+        verifyNoInteractions(
+                eventPublisher
         );
     }
 }

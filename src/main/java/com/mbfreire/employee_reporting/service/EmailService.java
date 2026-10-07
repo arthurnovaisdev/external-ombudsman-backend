@@ -13,7 +13,6 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 import java.util.Map;
 
-
 @Service
 @RequiredArgsConstructor
 public class EmailService {
@@ -35,13 +34,29 @@ public class EmailService {
     @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
 
-    public void sendPasswordResetEmail(String toEmail, String toName, String resetToken) {
-        // Fictitious link, change later
-        String resetLink = buildPasswordResetLink(resetToken);
 
-        String safeName = HtmlUtils.htmlEscape(toName);
+    // PASSWORD RESET
 
-        String safeResetLink = HtmlUtils.htmlEscape(resetLink);
+    public void sendPasswordResetEmail(
+            String toEmail,
+            String toName,
+            String resetToken
+    ) {
+
+        String resetLink =
+                buildPasswordResetLink(
+                        resetToken
+                );
+
+        String safeName =
+                HtmlUtils.htmlEscape(
+                        toName
+                );
+
+        String safeResetLink =
+                HtmlUtils.htmlEscape(
+                        resetLink
+                );
 
         String htmlContent =
                 """
@@ -51,8 +66,7 @@ public class EmailService {
 
                         <p>
                             Recebemos uma solicitação para redefinir
-                            a senha da sua conta no sistema da
-                            Ouvidoria Interna.
+                            a senha da sua conta na Ouvidoria MBFREIRE.
                         </p>
 
                         <p>
@@ -85,12 +99,13 @@ public class EmailService {
                                 safeName,
                                 safeResetLink
                         );
+
         String textContent =
                 """
                 Olá, %s.
 
                 Recebemos uma solicitação para redefinir a senha
-                da sua conta no sistema da Ouvidoria Interna.
+                da sua conta na Ouvidoria MBFREIRE.
 
                 Acesse o link abaixo para criar uma nova senha:
 
@@ -103,28 +118,242 @@ public class EmailService {
                                 resetLink
                         );
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("api-key", apiKey);
-        headers.set("accept", "application/json");
+        sendEmail(
+                toEmail,
+                toName,
+                "Redefinição de Senha - Ouvidoria MBFREIRE",
+                htmlContent,
+                textContent
+        );
+    }
 
-        Map<String, Object> body = Map.of(
-                "sender", Map.of("name", senderName, "email", senderEmail),
-                "to", List.of(Map.of("email", toEmail, "name", toName)),
-                "subject", "Redefinição de Senha - Ouvidoria Interna",
-                "htmlContent", htmlContent, "textContent", textContent
+
+    // ADMIN - NEW REPORT
+
+    public void sendNewReportAdminNotification(
+            String toEmail,
+            String protocol
+    ) {
+
+        String safeProtocol =
+                HtmlUtils.htmlEscape(
+                        protocol
+                );
+
+        String htmlContent =
+                """
+                <html>
+                    <body>
+                        <h2>Nova manifestação recebida</h2>
+
+                        <p>
+                            Uma nova manifestação foi registrada
+                            na Ouvidoria MBFREIRE.
+                        </p>
+
+                        <p>
+                            Protocolo:
+                            <b>%s</b>
+                        </p>
+
+                        <p>
+                            Acesse o painel administrativo
+                            para consultar os detalhes.
+                        </p>
+                    </body>
+                </html>
+                """
+                        .formatted(
+                                safeProtocol
+                        );
+
+        String textContent =
+                """
+                Nova manifestação recebida.
+
+                Uma nova manifestação foi registrada
+                na Ouvidoria MBFREIRE.
+
+                Protocolo: %s
+
+                Acesse o painel administrativo
+                para consultar os detalhes.
+                """
+                        .formatted(
+                                protocol
+                        );
+
+        sendEmail(
+                toEmail,
+                "Administrador",
+                "Nova manifestação - " + protocol,
+                htmlContent,
+                textContent
+        );
+    }
+
+
+    // ADMIN - NEW CLIENT MESSAGE
+
+    public void sendNewClientMessageAdminNotification(
+            String toEmail,
+            String protocol
+    ) {
+
+        String safeProtocol =
+                HtmlUtils.htmlEscape(
+                        protocol
+                );
+
+        String htmlContent =
+                """
+                <html>
+                    <body>
+                        <h2>Nova mensagem em uma manifestação</h2>
+
+                        <p>
+                            Um cliente enviou uma nova mensagem
+                            na Ouvidoria MBFREIRE.
+                        </p>
+
+                        <p>
+                            Protocolo:
+                            <b>%s</b>
+                        </p>
+
+                        <p>
+                            Acesse o painel administrativo
+                            para consultar a conversa.
+                        </p>
+                    </body>
+                </html>
+                """
+                        .formatted(
+                                safeProtocol
+                        );
+
+        String textContent =
+                """
+                Nova mensagem em uma manifestação.
+
+                Um cliente enviou uma nova mensagem
+                na Ouvidoria MBFREIRE.
+
+                Protocolo: %s
+
+                Acesse o painel administrativo
+                para consultar a conversa.
+                """
+                        .formatted(
+                                protocol
+                        );
+
+        sendEmail(
+                toEmail,
+                "Administrador",
+                "Nova mensagem - " + protocol,
+                htmlContent,
+                textContent
+        );
+    }
+
+
+    // BREVO
+
+    private void sendEmail(
+            String toEmail,
+            String toName,
+            String subject,
+            String htmlContent,
+            String textContent
+    ) {
+
+        HttpHeaders headers =
+                new HttpHeaders();
+
+        headers.setContentType(
+                MediaType.APPLICATION_JSON
         );
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+        headers.set(
+                "api-key",
+                apiKey
+        );
 
-        restTemplate.postForEntity(apiUrl, request, String.class);
+        headers.set(
+                "accept",
+                "application/json"
+        );
+
+        Map<String, Object> body =
+                Map.of(
+                        "sender",
+                        Map.of(
+                                "name",
+                                senderName,
+                                "email",
+                                senderEmail
+                        ),
+
+                        "to",
+                        List.of(
+                                Map.of(
+                                        "email",
+                                        toEmail,
+                                        "name",
+                                        toName
+                                )
+                        ),
+
+                        "subject",
+                        subject,
+
+                        "htmlContent",
+                        htmlContent,
+
+                        "textContent",
+                        textContent
+                );
+
+        HttpEntity<Map<String, Object>> request =
+                new HttpEntity<>(
+                        body,
+                        headers
+                );
+
+        restTemplate.postForEntity(
+                apiUrl,
+                request,
+                String.class
+        );
     }
 
-    private String buildPasswordResetLink(String resetToken) {
-        if (frontendBaseUrl == null || frontendBaseUrl.isBlank()) {
-            throw new IllegalStateException("A URL do frontend não foi configurada.");
+
+    private String buildPasswordResetLink(
+            String resetToken
+    ) {
+
+        if (frontendBaseUrl == null
+                || frontendBaseUrl.isBlank()) {
+
+            throw new IllegalStateException(
+                    "A URL do frontend não foi configurada."
+            );
         }
-        return UriComponentsBuilder.fromUriString(frontendBaseUrl).path("/reset-password").queryParam("token", resetToken).build().encode().toUriString();
-    }
 
+        return UriComponentsBuilder
+                .fromUriString(
+                        frontendBaseUrl
+                )
+                .path(
+                        "/reset-password"
+                )
+                .queryParam(
+                        "token",
+                        resetToken
+                )
+                .build()
+                .encode()
+                .toUriString();
+    }
 }

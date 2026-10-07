@@ -5,6 +5,7 @@ import com.mbfreire.employee_reporting.dto.request.ReportRequestDTO;
 import com.mbfreire.employee_reporting.dto.response.*;
 import com.mbfreire.employee_reporting.entity.*;
 import com.mbfreire.employee_reporting.enums.Role;
+import com.mbfreire.employee_reporting.event.AdminNotificationEvent;
 import com.mbfreire.employee_reporting.exception.AttachmentUnavailableException;
 import com.mbfreire.employee_reporting.exception.BusinessRuleException;
 import com.mbfreire.employee_reporting.exception.ResourceNotFoundException;
@@ -12,6 +13,7 @@ import com.mbfreire.employee_reporting.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.core.io.Resource;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,8 @@ public class ReportService {
     private final SecureRandom secureRandom =
             new SecureRandom();
 
+    private final ApplicationEventPublisher eventPublisher;
+
     @Transactional
     public ProtocolResponseDTO register(
             ReportRequestDTO dto,
@@ -89,6 +93,13 @@ public class ReportService {
                         .build();
 
         reportRepository.save(report);
+
+        eventPublisher.publishEvent(
+                new AdminNotificationEvent(
+                        AdminNotificationEvent.Type.REPORT_CREATED,
+                        report.getProtocol()
+                )
+        );
 
         return new ProtocolResponseDTO(
                 report.getProtocol()

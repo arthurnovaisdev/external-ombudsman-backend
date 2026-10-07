@@ -6,6 +6,7 @@ import com.mbfreire.employee_reporting.entity.Category;
 import com.mbfreire.employee_reporting.entity.Report;
 import com.mbfreire.employee_reporting.entity.User;
 import com.mbfreire.employee_reporting.enums.Role;
+import com.mbfreire.employee_reporting.event.AdminNotificationEvent;
 import com.mbfreire.employee_reporting.exception.AttachmentUnavailableException;
 import com.mbfreire.employee_reporting.repository.AttachmentRepository;
 import com.mbfreire.employee_reporting.repository.AuditLogRepository;
@@ -13,7 +14,9 @@ import com.mbfreire.employee_reporting.repository.CategoryRepository;
 import com.mbfreire.employee_reporting.repository.ReportRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -27,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +40,7 @@ class ReportServiceAttachmentFeatureTest {
     private CategoryRepository categoryRepository;
     private AttachmentRepository attachmentRepository;
     private ObjectProvider<FileStorageService> fileStorageServiceProvider;
+    private ApplicationEventPublisher eventPublisher;
 
     private ReportService reportService;
     private User client;
@@ -55,6 +60,9 @@ class ReportServiceAttachmentFeatureTest {
         fileStorageServiceProvider =
                 mock(ObjectProvider.class);
 
+        eventPublisher =
+                mock(ApplicationEventPublisher.class);
+
         AttachmentFeatureProperties properties =
                 new AttachmentFeatureProperties();
 
@@ -67,7 +75,8 @@ class ReportServiceAttachmentFeatureTest {
                         mock(AuditLogRepository.class),
                         fileStorageServiceProvider,
                         attachmentRepository,
-                        properties
+                        properties,
+                        eventPublisher
                 );
 
         client =
@@ -129,6 +138,30 @@ class ReportServiceAttachmentFeatureTest {
         verifyNoInteractions(
                 fileStorageServiceProvider,
                 attachmentRepository
+        );
+
+        ArgumentCaptor<AdminNotificationEvent> eventCaptor =
+                ArgumentCaptor.forClass(
+                        AdminNotificationEvent.class
+                );
+
+        verify(
+                eventPublisher
+        ).publishEvent(
+                eventCaptor.capture()
+        );
+
+        AdminNotificationEvent event =
+                eventCaptor.getValue();
+
+        assertEquals(
+                AdminNotificationEvent.Type.REPORT_CREATED,
+                event.type()
+        );
+
+        assertEquals(
+                response.protocol(),
+                event.protocol()
         );
     }
 

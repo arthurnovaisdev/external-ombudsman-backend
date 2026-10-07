@@ -6,11 +6,13 @@ import com.mbfreire.employee_reporting.entity.Report;
 import com.mbfreire.employee_reporting.entity.ReportMessage;
 import com.mbfreire.employee_reporting.entity.User;
 import com.mbfreire.employee_reporting.enums.Role;
+import com.mbfreire.employee_reporting.event.AdminNotificationEvent;
 import com.mbfreire.employee_reporting.exception.BusinessRuleException;
 import com.mbfreire.employee_reporting.exception.ResourceNotFoundException;
 import com.mbfreire.employee_reporting.repository.ReportMessageRepository;
 import com.mbfreire.employee_reporting.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -24,6 +26,7 @@ public class ReportMessageService {
     private final ReportRepository reportRepository;
     private final ReportMessageRepository reportMessageRepository;
 
+    private final ApplicationEventPublisher eventPublisher;
 
     // CLIENT
 
@@ -80,11 +83,21 @@ public class ReportMessageService {
 
         ensureReportIsOpen(report);
 
-        return saveMessage(
-                report,
-                client,
-                dto
+        ReportMessageResponseDTO response =
+                saveMessage(
+                        report,
+                        client,
+                        dto
+                );
+
+        eventPublisher.publishEvent(
+                new AdminNotificationEvent(
+                        AdminNotificationEvent.Type.CLIENT_MESSAGE_CREATED,
+                        report.getProtocol()
+                )
         );
+
+        return response;
     }
 
 
