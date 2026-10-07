@@ -10,37 +10,60 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ReportRepository
         extends JpaRepository<Report, UUID> {
 
-    boolean existsByProtocol(String protocol);
+    boolean existsByProtocol(
+            String protocol
+    );
 
+    @EntityGraph(
+            attributePaths = {
+                    "category",
+                    "owner"
+            }
+    )
+    Optional<Report> findByProtocol(
+            String protocol
+    );
 
-    @EntityGraph(attributePaths = {"category", "owner"})
-    Optional<Report> findByProtocol(String protocol);
-
-
-    @EntityGraph(attributePaths = {"category", "owner"})
+    @EntityGraph(
+            attributePaths = {
+                    "category",
+                    "owner"
+            }
+    )
     Optional<Report> findByProtocolAndOwnerId(
             String protocol,
             UUID ownerId
     );
 
-
-    @EntityGraph(attributePaths = {"category", "owner"})
+    @EntityGraph(
+            attributePaths = {
+                    "category",
+                    "owner"
+            }
+    )
     Page<Report> findByOwnerId(
             UUID ownerId,
             Pageable pageable
     );
 
-
     @Override
-    @EntityGraph(attributePaths = {"category", "owner"})
-    Page<Report> findAll(Pageable pageable);
-
+    @EntityGraph(
+            attributePaths = {
+                    "category",
+                    "owner"
+            }
+    )
+    Page<Report> findAll(
+            Pageable pageable
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -51,9 +74,9 @@ public interface ReportRepository
             where r.protocol = :protocol
             """)
     Optional<Report> findByProtocolForUpdate(
-            @Param("protocol") String protocol
+            @Param("protocol")
+            String protocol
     );
-
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -65,7 +88,26 @@ public interface ReportRepository
               and r.owner.id = :ownerId
             """)
     Optional<Report> findByProtocolAndOwnerIdForUpdate(
-            @Param("protocol") String protocol,
-            @Param("ownerId") UUID ownerId
+            @Param("protocol")
+            String protocol,
+
+            @Param("ownerId")
+            UUID ownerId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select r
+            from Report r
+            where r.closedAt is not null
+              and r.closedAt <= :cutoff
+              and r.messagesPurgedAt is null
+            order by r.closedAt asc, r.id asc
+            """)
+    List<Report> findForMessagePurge(
+            @Param("cutoff")
+            Instant cutoff,
+
+            Pageable pageable
     );
 }

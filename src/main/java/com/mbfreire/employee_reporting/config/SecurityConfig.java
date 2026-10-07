@@ -66,6 +66,18 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.HEAD,
+                                "/actuator/health",
+                                "/actuator/health/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
                                 "/api/health"
                         ).permitAll()
 
