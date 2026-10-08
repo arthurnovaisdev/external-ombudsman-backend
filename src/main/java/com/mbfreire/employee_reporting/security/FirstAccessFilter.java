@@ -65,11 +65,6 @@ public class FirstAccessFilter extends OncePerRequestFilter {
         String method =
                 request.getMethod();
 
-        /*
-         * Mesmo que um JWT seja enviado acidentalmente
-         * nestas rotas, o filtro de primeiro acesso
-         * não deve interferir nelas.
-         */
         if (isPublicRoute(uri)) {
 
             filterChain.doFilter(
@@ -129,7 +124,10 @@ public class FirstAccessFilter extends OncePerRequestFilter {
             String uri
     ) {
 
-        return uri.equals("/api/auth/login")
+        return uri.equals("/api/health")
+                || uri.equals("/actuator/health")
+                || uri.startsWith("/actuator/health/")
+                || uri.equals("/api/auth/login")
                 || uri.equals("/api/auth/forgot-password")
                 || uri.equals("/api/auth/reset-password")
                 || uri.startsWith("/swagger-ui/")
