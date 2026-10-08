@@ -128,8 +128,23 @@ class ReportMessageServiceTest {
                 error.getMessage()
         );
 
+        verify(
+                reportRepository
+        ).findByProtocolAndOwnerId(
+                protocol,
+                clientA.getId()
+        );
+
+        verify(
+                reportRepository,
+                never()
+        ).findByProtocol(
+                protocol
+        );
+
         verifyNoInteractions(
-                reportMessageRepository
+                reportMessageRepository,
+                eventPublisher
         );
     }
 
@@ -154,15 +169,35 @@ class ReportMessageServiceTest {
                         "Tentativa de mensagem."
                 );
 
-        assertThrows(
-                ResourceNotFoundException.class,
-                () ->
-                        reportMessageService
-                                .sendMineMessage(
-                                        protocol,
-                                        clientA,
-                                        dto
-                                )
+        var error =
+                assertThrows(
+                        ResourceNotFoundException.class,
+                        () ->
+                                reportMessageService
+                                        .sendMineMessage(
+                                                protocol,
+                                                clientA,
+                                                dto
+                                        )
+                );
+
+        assertEquals(
+                "Manifestação não encontrada.",
+                error.getMessage()
+        );
+
+        verify(
+                reportRepository
+        ).findByProtocolAndOwnerIdForUpdate(
+                protocol,
+                clientA.getId()
+        );
+
+        verify(
+                reportRepository,
+                never()
+        ).findByProtocolForUpdate(
+                protocol
         );
 
         verifyNoInteractions(
@@ -367,6 +402,62 @@ class ReportMessageServiceTest {
     }
 
     @Test
+    void adminCannotSendMessageToClosedReport() {
+
+        String protocol =
+                "DEN-2026-ABCD2345";
+
+        Report report =
+                Report.builder()
+                        .id(UUID.randomUUID())
+                        .protocol(protocol)
+                        .owner(clientA)
+                        .closedAt(
+                                Instant.now()
+                        )
+                        .build();
+
+        when(
+                reportRepository
+                        .findByProtocolForUpdate(
+                                protocol
+                        )
+        ).thenReturn(
+                Optional.of(report)
+        );
+
+        var error =
+                assertThrows(
+                        BusinessRuleException.class,
+                        () ->
+                                reportMessageService
+                                        .sendAdminMessage(
+                                                protocol,
+                                                admin,
+                                                new ReportMessageRequestDTO(
+                                                        "Resposta administrativa."
+                                                )
+                                        )
+                );
+
+        assertEquals(
+                "Não é possível enviar mensagens para uma manifestação encerrada.",
+                error.getMessage()
+        );
+
+        verify(
+                reportMessageRepository,
+                never()
+        ).saveAndFlush(
+                any()
+        );
+
+        verifyNoInteractions(
+                eventPublisher
+        );
+    }
+
+    @Test
     void adminCanReadMessagesFromAnyReport() {
 
         String protocol =
@@ -459,6 +550,56 @@ class ReportMessageServiceTest {
                                         PageRequest.of(
                                                 0,
                                                 20
+                                        )
+                                )
+        );
+
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                        reportMessageService
+                                .sendAdminMessage(
+                                        "DEN-2026-ABCD2345",
+                                        clientA,
+                                        new ReportMessageRequestDTO(
+                                                "Tentativa indevida."
+                                        )
+                                )
+        );
+
+        verifyNoInteractions(
+                reportRepository,
+                reportMessageRepository,
+                eventPublisher
+        );
+    }
+
+    @Test
+    void adminCannotUseClientMessageMethods() {
+
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                        reportMessageService
+                                .findMineMessages(
+                                        "DEN-2026-ABCD2345",
+                                        admin,
+                                        PageRequest.of(
+                                                0,
+                                                20
+                                        )
+                                )
+        );
+
+        assertThrows(
+                AccessDeniedException.class,
+                () ->
+                        reportMessageService
+                                .sendMineMessage(
+                                        "DEN-2026-ABCD2345",
+                                        admin,
+                                        new ReportMessageRequestDTO(
+                                                "Tentativa indevida."
                                         )
                                 )
         );
