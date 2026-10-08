@@ -16,7 +16,7 @@
 	</parent>
 
 	<groupId>com.mbfreire</groupId>
-	<artifactId>employee-reporting</artifactId>
+	<artifactId>external-ombudsman</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 
 	<name>External Ombudsman Backend</name>

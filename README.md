@@ -1,4 +1,4 @@
-# Ouvidoria Interna - Backend
+# Ouvidoria MBFREIRE - Backend
 
 Backend de uma aplicação corporativa de ouvidoria interna e canal de denúncias, desenvolvida para uso real em uma empresa.
 
