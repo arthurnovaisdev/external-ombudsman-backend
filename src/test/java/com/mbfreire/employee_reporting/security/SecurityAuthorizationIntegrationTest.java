@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -142,6 +143,84 @@ class SecurityAuthorizationIntegrationTest {
                 )
                 .andExpect(
                         content().string("UP")
+                );
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void legacyConsultRouteRemainsBlocked() throws Exception {
+
+        mockMvc.perform(
+                        get("/api/reports/consult")
+                                .param(
+                                        "protocol",
+                                        "DEN-2026-ABCD2345"
+                                )
+                                .param(
+                                        "code",
+                                        "ABCD2345EF"
+                                )
+                )
+                .andExpect(
+                        status().isForbidden()
+                );
+    }
+
+    @Test
+    @WithMockUser(username = "cliente.a", roles = "CLIENT")
+    void legacyConsultRouteIsAlsoBlockedForClient() throws Exception {
+
+        mockMvc.perform(
+                        get("/api/reports/consult")
+                                .param(
+                                        "protocol",
+                                        "DEN-2026-ABCD2345"
+                                )
+                                .param(
+                                        "code",
+                                        "ABCD2345EF"
+                                )
+                )
+                .andExpect(
+                        status().isForbidden()
+                );
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void legacyStatusUpdateEndpointNoLongerExists() throws Exception {
+
+        mockMvc.perform(
+                        patch(
+                                "/api/reports/admin/DEN-2026-ABCD2345/status"
+                        )
+                                .contentType(
+                                        MediaType.APPLICATION_JSON
+                                )
+                                .content(
+                                        """
+                                        {
+                                          "newStatus": "CLOSED"
+                                        }
+                                        """
+                                )
+                )
+                .andExpect(
+                        status().isNotFound()
+                );
+    }
+
+    @Test
+    @WithMockUser(username = "cliente.a", roles = "CLIENT")
+    void unknownAuthenticatedRouteIsDeniedByDefault() throws Exception {
+
+        mockMvc.perform(
+                        get(
+                                "/api/internal-route-that-does-not-exist"
+                        )
+                )
+                .andExpect(
+                        status().isForbidden()
                 );
     }
 }
