@@ -1,40 +1,89 @@
-# Ouvidoria MBFREIRE - Backend
+# Ouvidoria MBFREIRE — Backend
 
-Backend de uma aplicação corporativa de ouvidoria interna e canal de denúncias, desenvolvida para uso real em uma empresa.
+Backend da aplicação **Ouvidoria MBFREIRE**, criado para registrar, acompanhar e gerenciar manifestações de clientes de forma segura e organizada.
 
-A API foi construída com **Java, Spring Boot, Spring Security, JWT e PostgreSQL**, sendo responsável por autenticação, controle de acesso, gerenciamento de usuários e categorias, registro de denúncias, atualização de status, anexos, alteração e recuperação de senha.
+## Objetivo
 
-As denúncias podem ser acompanhadas por meio de **protocolo e código de acompanhamento**, mantendo o fluxo separado da identidade do usuário.
+A aplicação permite que clientes registrem manifestações e acompanhem seus atendimentos, enquanto administradores gerenciam usuários, categorias, mensagens e encerramento das manifestações.
 
-O projeto foi desenvolvido considerando boas práticas de segurança, privacidade e princípios da **LGPD**.
+O sistema foi desenvolvido com foco em:
 
-## Tecnologias
+- segurança;
+- controle de acesso;
+- isolamento de dados entre clientes;
+- rastreabilidade;
+- proteção contra abuso.
 
-- Java
-- Spring Boot
-- Spring Security
-- JWT
-- Spring Data JPA
-- Hibernate
-- PostgreSQL
-- Maven
-- Docker
-- Brevo
+## Perfis de acesso
+
+### CLIENT
+
+Pode:
+
+- realizar login;
+- alterar a senha no primeiro acesso;
+- criar manifestações;
+- visualizar apenas suas próprias manifestações;
+- trocar mensagens;
+- recuperar e alterar a senha.
+
+### ADMIN
+
+Pode:
+
+- visualizar todas as manifestações;
+- responder clientes;
+- encerrar manifestações;
+- cadastrar e gerenciar usuários;
+- gerenciar categorias.
+
+Não existe cadastro público.
 
 ## Principais funcionalidades
 
-- Autenticação e autorização
-- Controle de acesso por perfil
-- Cadastro e gerenciamento de usuários
-- Gerenciamento de categorias
-- Registro de denúncias
-- Anexos
-- Protocolo e código de acompanhamento
-- Consulta de denúncias
-- Atualização de status
-- Alteração e recuperação de senha
-- Envio de e-mails transacionais
+- Autenticação com JWT;
+- Perfis `CLIENT` e `ADMIN`;
+- Primeiro acesso com troca obrigatória de senha;
+- Recuperação de senha por e-mail;
+- Criação e acompanhamento de manifestações;
+- Mensagens entre cliente e administrador;
+- Encerramento de manifestações;
+- Suporte opcional a anexos;
+- Notificações por e-mail com Brevo;
+- Rate limiting;
+- Retenção automática de mensagens;
+- Controle de acesso e isolamento entre clientes.
+
+## Tecnologias
+
+- Java 25
+- Spring Boot 4.1.1
+- Spring Security
+- JWT
+- Spring Data JPA
+- PostgreSQL
+- Flyway
+- Docker
+- Maven
+- JUnit 5
+- Mockito
+- H2
+- Brevo
+
+## Segurança
+
+A aplicação utiliza:
+
+- JWT;
+- autorização por roles;
+- `tokenVersion` para revogação de sessões;
+- rate limiting;
+- validação de dados;
+- isolamento por proprietário;
+- rotas bloqueadas por padrão com `denyAll()`.
 
 ## Autor
 
-Arthur Novais Peixoto
+Desenvolvido por **Arthur Novais Peixoto**.
+
+GitHub: `arthurnovaisdev`
