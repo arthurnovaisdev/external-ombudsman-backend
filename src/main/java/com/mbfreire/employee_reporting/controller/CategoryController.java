@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
@@ -31,8 +33,39 @@ public class CategoryController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<CategoryResponseDTO>> findAll(@RequestParam(defaultValue = "0") @Min(value = 0, message = "A página não pode ser negativa.") int page, @RequestParam(defaultValue = "20") @Min(value = 1, message = "O tamanho da página deve ser no mínimo 1.") @Max(value = 50, message = "O tamanho da página deve ser no máximo 50.") int size) {
+    public ResponseEntity<Page<CategoryResponseDTO>> findAllActive(
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "A página não pode ser negativa.")
+            int page,
+            @RequestParam(defaultValue = "20")
+            @Min(value = 1, message = "O tamanho da página deve ser no mínimo 1.")
+            @Max(value = 50, message = "O tamanho da página deve ser no máximo 50.")
+            int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
-        return ResponseEntity.ok(categoryService.findAll(pageable));
+        return ResponseEntity.ok(categoryService.findAllActive(pageable));
     }
+
+    @GetMapping("/admin")
+    public ResponseEntity<Page<CategoryResponseDTO>> findAllForAdmin(
+            @RequestParam(defaultValue = "0")
+            @Min(value = 0, message = "A página não pode ser negativa.")
+            int page,
+            @RequestParam(defaultValue = "20")
+            @Min(value = 1, message = "O tamanho da página deve ser no mínimo 1.")
+            @Max(value = 50, message = "O tamanho da página deve ser no máximo 50.")
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
+
+        return ResponseEntity.ok(
+                categoryService.findAllForAdmin(pageable)
+        );
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
+        categoryService.deactivate(id);
+        return ResponseEntity.noContent().build();
+    }
+
 }

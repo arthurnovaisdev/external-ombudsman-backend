@@ -86,7 +86,6 @@ public class SecurityConfig {
                                 "/api/health"
                         ).permitAll()
 
-
                         // PUBLIC AUTHENTICATION
 
                         .requestMatchers(
@@ -95,10 +94,8 @@ public class SecurityConfig {
                                 "/api/auth/reset-password"
                         ).permitAll()
 
-
                         // SWAGGER
-                        // Development only.
-                        // Disabled in production profile.
+                        // Development only; disabled in production profile.
 
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -107,7 +104,6 @@ public class SecurityConfig {
                                 "/swagger-ui.html"
                         ).permitAll()
 
-
                         // ADMIN - USER REGISTRATION
 
                         .requestMatchers(
@@ -115,13 +111,11 @@ public class SecurityConfig {
                                 "/api/auth/register"
                         ).hasRole("ADMIN")
 
-
                         // OWN USER ACCOUNT
 
                         .requestMatchers(
                                 "/api/users/me/**"
                         ).authenticated()
-
 
                         // ADMIN - USER MANAGEMENT
 
@@ -129,15 +123,11 @@ public class SecurityConfig {
                                 "/api/users/**"
                         ).hasRole("ADMIN")
 
-
-
                         // ADMIN - REPORTS
-                        // Includes details, messages, attachments and close
 
                         .requestMatchers(
                                 "/api/reports/admin/**"
                         ).hasRole("ADMIN")
-
 
                         // CLIENT - CREATE REPORT
 
@@ -146,16 +136,13 @@ public class SecurityConfig {
                                 "/api/reports"
                         ).hasRole("CLIENT")
 
-
                         // CLIENT - OWN REPORTS
-                        // Includes details, messages and attachments
 
                         .requestMatchers(
                                 "/api/reports/mine/**"
                         ).hasRole("CLIENT")
 
-
-                        // CATEGORIES
+                        // CATEGORIES: active list for CLIENT and ADMIN
 
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -165,35 +152,37 @@ public class SecurityConfig {
                                 "ADMIN"
                         )
 
+                        // CATEGORIES: admin management
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/categories/admin"
+                        ).hasRole("ADMIN")
+
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/categories"
                         ).hasRole("ADMIN")
 
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/categories/*/deactivate"
+                        ).hasRole("ADMIN")
 
                         // DENY BY DEFAULT
 
                         .anyRequest().denyAll()
                 )
 
-
-                // JWT
-
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
 
-
-                // FIRST ACCESS
-
                 .addFilterAfter(
                         firstAccessFilter,
                         JWTAuthenticationFilter.class
                 )
-
-
-                // RATE LIMIT
 
                 .addFilterAfter(
                         apiRateLimitFilter,
@@ -203,14 +192,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint(
             ObjectMapper mapper
     ) {
-
         return (request, response, authException) -> {
-
             response.setStatus(
                     HttpServletResponse.SC_UNAUTHORIZED
             );
@@ -219,12 +205,11 @@ public class SecurityConfig {
                     "application/json;charset=UTF-8"
             );
 
-            var error =
-                    new ErrorResponseDTO(
-                            401,
-                            "Token ausente, inválido ou expirado",
-                            LocalDateTime.now()
-                    );
+            var error = new ErrorResponseDTO(
+                    401,
+                    "Token ausente, inválido ou expirado",
+                    LocalDateTime.now()
+            );
 
             response.getWriter().write(
                     mapper.writeValueAsString(error)
@@ -232,14 +217,11 @@ public class SecurityConfig {
         };
     }
 
-
     @Bean
     public AccessDeniedHandler accessDeniedHandler(
             ObjectMapper mapper
     ) {
-
         return (request, response, accessDeniedException) -> {
-
             response.setStatus(
                     HttpServletResponse.SC_FORBIDDEN
             );
@@ -248,12 +230,11 @@ public class SecurityConfig {
                     "application/json;charset=UTF-8"
             );
 
-            var error =
-                    new ErrorResponseDTO(
-                            403,
-                            "Você não tem permissão para acessar este recurso",
-                            LocalDateTime.now()
-                    );
+            var error = new ErrorResponseDTO(
+                    403,
+                    "Você não tem permissão para acessar este recurso",
+                    LocalDateTime.now()
+            );
 
             response.getWriter().write(
                     mapper.writeValueAsString(error)
@@ -261,18 +242,15 @@ public class SecurityConfig {
         };
     }
 
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration config
     ) throws Exception {
-
         return config.getAuthenticationManager();
     }
 }
